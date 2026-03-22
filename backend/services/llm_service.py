@@ -118,7 +118,8 @@ async def generate_section(
             ],
             temperature=0.3,
         )
-        return response.choices[0].message.content or ""
+        content = response.choices[0].message.content if response.choices else None
+        return content or ""
     except Exception as exc:
         logger.warning("LM Studio call failed (%s) – using template fallback", exc)
         return _template_fallback(section_type, section_name, rqs_content, glossary_content)
