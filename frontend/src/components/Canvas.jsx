@@ -27,13 +27,21 @@ const SECTION_POSITIONS = {
   conclusion: { x: 700, y: 450 },
 }
 
+const GRID_COLUMNS = 4
+const GRID_CELL_WIDTH = 250
+const GRID_CELL_HEIGHT = 200
+const GRID_OFFSET = 50
+
 function getDefaultPosition(sectionName, index) {
   for (const [key, pos] of Object.entries(SECTION_POSITIONS)) {
     if (sectionName.toLowerCase().includes(key.replace('_', ''))) {
       return pos
     }
   }
-  return { x: (index % 4) * 250 + 50, y: Math.floor(index / 4) * 200 + 50 }
+  return {
+    x: (index % GRID_COLUMNS) * GRID_CELL_WIDTH + GRID_OFFSET,
+    y: Math.floor(index / GRID_COLUMNS) * GRID_CELL_HEIGHT + GRID_OFFSET,
+  }
 }
 
 function getSectionType(sectionName) {

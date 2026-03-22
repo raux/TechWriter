@@ -4,6 +4,15 @@ from typing import List, Dict, Optional
 
 from backend.models import ConsistencyIssue
 
+# Sections that are not expected to directly reference an RQ
+SECTIONS_WITHOUT_RQ_REQUIREMENT = frozenset({
+    "introduction",
+    "related_work",
+    "conclusion",
+    "data_preparation",
+    "glossary",
+})
+
 
 def extract_terms_from_glossary(glossary_content: str) -> Dict[str, str]:
     """Extract term->definition mapping from a Markdown glossary (table format)."""
@@ -64,7 +73,7 @@ def validate_section_against_rqs(
 
     rq_refs = re.findall(r"\bRQ\d+\b", section_content, re.IGNORECASE)
 
-    if not rq_refs and section_name not in ("introduction", "related_work", "conclusion", "data_preparation", "glossary"):
+    if not rq_refs and section_name not in SECTIONS_WITHOUT_RQ_REQUIREMENT:
         issues.append(
             f"Section '{section_name}' does not explicitly reference any Research Question (RQ1, RQ2, etc.). "
             "Ensure the section aligns with at least one defined RQ."

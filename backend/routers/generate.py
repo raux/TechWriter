@@ -5,6 +5,11 @@ from backend.services import file_service, llm_service
 
 router = APIRouter(prefix="/projects/{project_name}/generate", tags=["generate"])
 
+# Node layout constants (match frontend GRID_CELL_* values)
+NODE_SPACING = 250
+NODE_ROW_WIDTH = 1000
+NODE_ROW_HEIGHT = 200
+
 
 @router.post("/")
 async def generate_section(project_name: str, request: GenerateRequest):
@@ -34,13 +39,13 @@ async def generate_section(project_name: str, request: GenerateRequest):
     nodes = meta.get("nodes", [])
     existing_ids = {n.get("id") for n in nodes}
     if request.section_name not in existing_ids:
-        offset = len(nodes) * 250
+        offset = len(nodes) * NODE_SPACING
         nodes.append({
             "id": request.section_name,
             "section_name": request.section_name,
             "section_type": request.section_type,
-            "x": offset % 1000,
-            "y": (offset // 1000) * 200,
+            "x": offset % NODE_ROW_WIDTH,
+            "y": (offset // NODE_ROW_WIDTH) * NODE_ROW_HEIGHT,
             "width": 200,
             "height": 100,
         })

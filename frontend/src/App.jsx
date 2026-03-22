@@ -10,6 +10,8 @@ import {
 } from './services/api.js'
 import './App.css'
 
+const TOAST_DURATION_MS = 3000
+
 export default function App() {
   const [projects, setProjects] = useState([])
   const [currentProject, setCurrentProject] = useState(null)
@@ -24,7 +26,7 @@ export default function App() {
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
+    setTimeout(() => setToast(null), TOAST_DURATION_MS)
   }
 
   useEffect(() => {

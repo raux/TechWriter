@@ -56,7 +56,9 @@ async def test_validate_section_with_rqs():
         assert resp.status_code == 200
         data = resp.json()
         assert data["section_name"] == "methodology_rq1"
-        assert len(data["issues"]) > 0
+    assert len(data["issues"]) > 0
+    # Algorithm A is a new bold term not present in RQs → expect terminology issue
+    assert any("Algorithm A" in issue or "terminology" in issue.lower() for issue in data["issues"])
 
 
 def test_extract_terms_from_glossary():
