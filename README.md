@@ -9,7 +9,7 @@
 - **Project Management** — Create and switch between multiple research paper projects.
 - **Visual Canvas** — Interactive node-based canvas (powered by [React Flow](https://reactflow.dev)) that visualises paper sections and their relationships. Drag nodes to reposition them.
 - **Section Editor** — Built-in Markdown editor for writing and editing paper sections with real-time save.
-- **LLM-Powered Generation** — Generate section drafts using an OpenAI-compatible API, with structured template fallback when no API key is configured.
+- **LLM-Powered Generation** — Generate section drafts using a local LLM via [LM Studio](https://lmstudio.ai/), with structured template fallback when LM Studio is not running.
 - **Validation & Consistency Checking** — Validate sections against Research Questions (RQs), detect missing RQ references, and check terminology consistency across your paper.
 - **Predefined Section Types** — Introduction, Data Preparation, Research Questions, Methodology, Results, Discussion, Related Work, Conclusion, and Glossary, each with its own icon and colour.
 
@@ -45,7 +45,7 @@ Run validation on any section to check alignment with your Research Questions an
 |-------|-----------|
 | Frontend | React 18, Vite, [React Flow](https://reactflow.dev) |
 | Backend | Python, FastAPI, Uvicorn |
-| LLM Integration | OpenAI-compatible API (optional) |
+| LLM Integration | [LM Studio](https://lmstudio.ai/) local model (OpenAI-compatible API) |
 | Storage | File-based (Markdown files + JSON metadata) |
 
 ## Getting Started
@@ -55,12 +55,18 @@ Run validation on any section to check alignment with your Research Questions an
 - Python 3.10+
 - Node.js 16+
 - npm
+- [LM Studio](https://lmstudio.ai/) — install and download at least one language model, then start the local server (default: `http://localhost:1234`)
 
 ### Backend
 
 ```bash
 cd backend
 pip install -r requirements.txt
+
+# Configure LM Studio connection
+cp ../.env.example .env
+# Edit .env if your LM Studio runs on a non-default port
+
 uvicorn main:app --reload
 ```
 
@@ -82,9 +88,8 @@ The development server starts at `http://localhost:5173` and proxies API request
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `OPENAI_API_KEY` | OpenAI API key for LLM generation | _(empty — uses template fallback)_ |
-| `OPENAI_API_BASE` | OpenAI-compatible API base URL | `https://api.openai.com/v1` |
-| `LLM_MODEL` | Model name to use for generation | `gpt-4o` |
+| `LM_STUDIO_BASE_URL` | LM Studio API base URL | `http://localhost:1234/v1` |
+| `LM_STUDIO_MODEL` | Model name (leave blank to auto-detect the first loaded model) | _(empty — auto-detect)_ |
 
 ## Project Structure
 
@@ -151,6 +156,7 @@ pytest -v
 | `POST` | `/projects/{project}/validate/section` | Validate a section |
 | `POST` | `/projects/{project}/validate/consistency` | Check terminology consistency |
 | `GET` | `/health` | Health check |
+| `GET` | `/status` | Check LM Studio connectivity |
 
 ## License
 

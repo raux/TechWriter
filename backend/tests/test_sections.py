@@ -26,6 +26,17 @@ async def test_health():
 
 
 @pytest.mark.asyncio
+async def test_status_endpoint():
+    """Status endpoint returns LM Studio connectivity info."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/status")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "lm_studio" in data
+    assert data["lm_studio"] in ("online", "offline")
+
+
+@pytest.mark.asyncio
 async def test_create_and_get_section():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post(
