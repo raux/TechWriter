@@ -105,7 +105,7 @@ Each section can be validated against the paper's Research Questions:
 - **Async:** All route handlers and service functions that perform I/O are `async`.
 - **Models:** All request/response bodies use Pydantic models defined in `backend/models.py`.
 - **Storage:** Projects are stored at `backend/projects/{project_name}/`. Sections are Markdown files in a `sections/` subdirectory. Canvas layout is in `canvas_meta.json`.
-- **LLM fallback:** When `OPENAI_API_KEY` is not set, `llm_service.py` returns structured templates instead of calling the API.
+- **LLM fallback:** When LM Studio is not running, `llm_service.py` returns structured templates instead of calling the API.
 
 ### Frontend
 
@@ -144,6 +144,5 @@ pytest -v
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `OPENAI_API_KEY` | API key for LLM generation | _(empty — uses template fallback)_ |
-| `OPENAI_API_BASE` | OpenAI-compatible API base URL | `https://api.openai.com/v1` |
-| `LLM_MODEL` | Model name for generation | `gpt-4o` |
+| `LM_STUDIO_BASE_URL` | LM Studio API base URL | `http://localhost:1234/v1` |
+| `LM_STUDIO_MODEL` | Model name (leave blank to auto-detect) | _(empty — auto-detect)_ |

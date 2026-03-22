@@ -1,4 +1,4 @@
-"""Tests for generation endpoint (template fallback - no LLM key)."""
+"""Tests for generation endpoint (template fallback - no LM Studio running)."""
 import pytest
 from httpx import AsyncClient, ASGITransport
 import shutil

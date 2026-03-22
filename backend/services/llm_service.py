@@ -1,11 +1,84 @@
-"""LLM service for content generation - uses a simple template-based approach when no LLM API key is configured, otherwise calls OpenAI-compatible API."""
+"""LLM service for content generation - connects to LM Studio local model via OpenAI-compatible API, with template fallback when LM Studio is unreachable."""
 import os
-import httpx
+import logging
+import urllib.parse
 from typing import Optional
 
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1")
-LLM_MODEL = os.environ.get("LLM_MODEL", "gpt-4o")
+import httpx
+from openai import OpenAI
+
+logger = logging.getLogger(__name__)
+
+LM_STUDIO_BASE_URL: str = os.getenv("LM_STUDIO_BASE_URL", "http://localhost:1234/v1")
+LM_STUDIO_MODEL: str = os.getenv("LM_STUDIO_MODEL", "")
+
+_ALLOWED_HOSTS: frozenset[str] = frozenset({"localhost", "127.0.0.1", "::1"})
+
+_client: Optional[OpenAI] = None
+_resolved_model: str = ""
+
+
+def _normalize_base_url(url: str) -> str:
+    """Ensure *url* ends with ``/v1`` so the OpenAI client hits the correct LM Studio path."""
+    url = url.rstrip("/")
+    if not url.endswith("/v1"):
+        url = url + "/v1"
+    return url
+
+
+def _validate_lm_studio_url(url: str) -> None:
+    """Raise ``ValueError`` if *url* does not point to a loopback address."""
+    parsed = urllib.parse.urlparse(url)
+    host = parsed.hostname or ""
+    if host not in _ALLOWED_HOSTS:
+        raise ValueError(
+            f"LM Studio URL host '{host}' is not allowed. "
+            "Only localhost / 127.0.0.1 / ::1 are permitted."
+        )
+
+
+def get_client() -> OpenAI:
+    """Return a lazily-created OpenAI client pointed at LM Studio."""
+    global _client
+    if _client is None:
+        base = _normalize_base_url(LM_STUDIO_BASE_URL)
+        logger.debug("Creating OpenAI client → base_url=%s", base)
+        _client = OpenAI(base_url=base, api_key="lm-studio")
+    return _client
+
+
+def get_model() -> str:
+    """Return the configured or auto-detected model name."""
+    global _resolved_model
+    if _resolved_model:
+        return _resolved_model
+    if LM_STUDIO_MODEL:
+        _resolved_model = LM_STUDIO_MODEL
+        logger.debug("Using model from LM_STUDIO_MODEL env: %s", _resolved_model)
+        return _resolved_model
+    # Auto-detect: pick the first model exposed by LM Studio
+    logger.debug("No model configured – fetching available models from LM Studio…")
+    client = get_client()
+    models = client.models.list()
+    model_ids = [m.id for m in models.data]
+    logger.debug("Models returned by LM Studio: %s", model_ids)
+    if not model_ids:
+        raise RuntimeError("LM Studio returned no available models.")
+    _resolved_model = model_ids[0]
+    logger.info("Auto-selected model: %s", _resolved_model)
+    return _resolved_model
+
+
+async def check_lm_studio_status() -> dict:
+    """Check whether LM Studio is currently reachable. Returns a status dict."""
+    health_url = _normalize_base_url(LM_STUDIO_BASE_URL) + "/models"
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as http:
+            resp = await http.get(health_url)
+            resp.raise_for_status()
+        return {"lm_studio": "online", "base_url": LM_STUDIO_BASE_URL}
+    except Exception as exc:
+        return {"lm_studio": "offline", "error": str(exc)}
 
 
 async def generate_section(
@@ -15,7 +88,7 @@ async def generate_section(
     glossary_content: Optional[str],
     additional_context: str = "",
 ) -> str:
-    """Generate markdown content for a section using LLM or template fallback."""
+    """Generate markdown content for a section using LM Studio or template fallback."""
 
     system_prompt = (
         "You are an expert academic writer. Generate well-structured Markdown content "
@@ -27,26 +100,29 @@ async def generate_section(
         section_type, section_name, rqs_content, glossary_content, additional_context
     )
 
-    if not OPENAI_API_KEY:
+    # Validate the configured URL before attempting a call
+    try:
+        _validate_lm_studio_url(LM_STUDIO_BASE_URL)
+    except ValueError:
+        logger.warning("LM Studio URL validation failed – using template fallback")
         return _template_fallback(section_type, section_name, rqs_content, glossary_content)
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            f"{OPENAI_API_BASE}/chat/completions",
-            headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
-            json={
-                "model": LLM_MODEL,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                "temperature": 0.3,
-            },
-            timeout=60.0,
+    try:
+        client = get_client()
+        model = get_model()
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.3,
         )
-        response.raise_for_status()
-        data = response.json()
-        return data["choices"][0]["message"]["content"]
+        content = response.choices[0].message.content if response.choices else None
+        return content or ""
+    except Exception as exc:
+        logger.warning("LM Studio call failed (%s) – using template fallback", exc)
+        return _template_fallback(section_type, section_name, rqs_content, glossary_content)
 
 
 def _build_generation_prompt(
@@ -73,7 +149,7 @@ def _template_fallback(
     rqs_content: Optional[str],
     glossary_content: Optional[str],
 ) -> str:
-    """Return a structured template when no LLM API key is configured."""
+    """Return a structured template when LM Studio is unreachable."""
     templates = {
         "introduction": "# Introduction\n\n## Background\n\n[Provide background and motivation here.]\n\n## Problem Statement\n\n[State the problem this paper addresses.]\n\n## Contributions\n\n- Contribution 1\n- Contribution 2\n\n## Paper Structure\n\nThe remainder of this paper is organised as follows...",
         "data_preparation": "# Data Preparation\n\n## Dataset Description\n\n[Describe the dataset(s) used.]\n\n## Preprocessing Steps\n\n1. Step 1\n2. Step 2\n\n## Data Quality\n\n[Discuss data quality measures.]",
