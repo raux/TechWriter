@@ -1,0 +1,46 @@
+.section-node {
+  background: #1a1d27;
+  border: 2px solid var(--node-color, #3d4165);
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 160px;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.section-node:hover {
+  border-color: var(--node-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--node-color) 30%, transparent);
+}
+
+.section-node.selected {
+  border-color: var(--node-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--node-color) 40%, transparent);
+  background: color-mix(in srgb, var(--node-color) 10%, #1a1d27);
+}
+
+.node-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.node-icon {
+  font-size: 0.9rem;
+}
+
+.node-type {
+  font-size: 0.7rem;
+  color: var(--node-color);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.node-name {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+  font-weight: 500;
+}
